@@ -12,57 +12,52 @@ interface ThreatMatrixProps {
 
 export default function ThreatMatrix({ assessment, compact }: ThreatMatrixProps) {
   const current = assessment?.globalThreatLevel ?? 'MINIMAL'
-  const score = assessment?.threatScore ?? 0
-  const idx = LEVELS.indexOf(current)
+  const score   = assessment?.threatScore ?? 0
+  const idx     = LEVELS.indexOf(current)
 
   if (compact) {
-    // Horizontal segmented bar
     return (
-      <div className="flex gap-1 mt-2">
-        {LEVELS.map((level, i) => {
-          const color = getThreatColor(level)
-          const active = i === idx
-          const past = i < idx
-          return (
-            <div
-              key={level}
-              className="flex-1 rounded-sm"
-              style={{
-                height: '4px',
-                background: active || past ? color : 'var(--border)',
-                opacity: past ? 0.4 : 1,
-              }}
-            />
-          )
-        })}
+      <div className="flex gap-1 mt-3">
+        {LEVELS.map((level, i) => (
+          <div
+            key={level}
+            style={{
+              flex: 1, height: '4px', borderRadius: '2px',
+              background: i <= idx ? getThreatColor(level) : 'var(--hairline)',
+              opacity: i < idx ? 0.45 : 1,
+              transition: 'background 0.4s',
+            }}
+          />
+        ))}
       </div>
     )
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {LEVELS.map((level, i) => {
-        const color = getThreatColor(level)
+        const color  = getThreatColor(level)
         const active = level === current
-        const past = i < idx
+        const past   = i < idx
         return (
-          <div key={level} className="flex items-center gap-2" style={{ opacity: past ? 0.45 : 1 }}>
-            <span
-              className="w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ background: active ? color : 'var(--border)' }}
+          <div key={level} className="flex items-center gap-2.5" style={{ opacity: past ? 0.4 : 1 }}>
+            <div
+              style={{
+                width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
+                background: active ? color : 'var(--hairline-strong)',
+              }}
             />
-            <div className="flex-1" style={{ height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: active ? `${Math.max(15, score)}%` : past ? '100%' : '0%',
-                  background: color,
-                  borderRadius: '2px',
-                  transition: 'width 0.5s ease',
-                }}
-              />
+            <div style={{ flex: 1, height: '3px', background: 'var(--hairline)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', background: color, borderRadius: '2px', transition: 'width 0.5s ease',
+                width: active ? `${Math.max(10, score)}%` : past ? '100%' : '0%',
+              }} />
             </div>
-            <span className="font-terminal shrink-0" style={{ fontSize: '9px', color: active ? color : 'var(--text-muted)', minWidth: '56px', letterSpacing: '0.05em' }}>
+            <span style={{
+              fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase',
+              color: active ? color : 'var(--muted-soft)', minWidth: '60px', textAlign: 'right',
+              fontFamily: 'var(--font-body)',
+            }}>
               {level}
             </span>
           </div>

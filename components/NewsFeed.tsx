@@ -6,78 +6,80 @@ import { scoreSignal } from '@/lib/threatClassifier'
 import type { SourceType } from '@/lib/threatClassifier'
 import { formatDistanceToNow } from 'date-fns'
 
-type FeedTab = 'ALL' | 'WHO/CDC' | 'NEWS' | 'ACADEMIC' | 'YOUTUBE'
+type Tab = 'ALL' | 'WHO/CDC' | 'NEWS' | 'ACADEMIC' | 'YOUTUBE'
 
-const SOURCE_COLORS: Record<string, string> = {
-  'BBC World':      '#e05252',
-  'Al Jazeera':     '#52c77c',
-  'DW News':        '#4a9eff',
-  'France 24':      '#4a7eff',
-  'Guardian':       '#4a9eff',
-  'WHO DON':        '#4a9eff',
-  'CDC Hantavirus': '#4a9eff',
-  'ProMED Mail':    '#e07b39',
-  'ECDC':           '#9b7fe8',
-  'PubMed':         '#9b7fe8',
-  'WHO YouTube':    '#e05252',
-  'CDC YouTube':    '#e05252',
+const SRC_COLORS: Record<string, string> = {
+  'BBC World': '#991b1b', 'Al Jazeera': '#15803d', 'DW News': '#1d4ed8',
+  'France 24': '#1e40af', 'Guardian': '#1d4ed8', 'WHO DON': '#1e40af',
+  'CDC Hantavirus': '#1e40af', 'ProMED Mail': '#c2410c', 'ECDC': '#6d28d9',
+  'PubMed': '#7c3aed', 'WHO YouTube': '#dc2626', 'CDC YouTube': '#dc2626',
 }
 
-function getSourceColor(item: ParsedFeedItem): string {
-  return SOURCE_COLORS[item.source] ?? 'var(--text-muted)'
-}
-
-function relBar(score: number) {
-  const color = score >= 50 ? 'var(--threat-high)' : score >= 20 ? 'var(--threat-elevated)' : score >= 5 ? 'var(--threat-moderate)' : 'var(--border)'
+function relevanceBar(score: number) {
+  const color =
+    score >= 50 ? 'var(--sem-error)' :
+    score >= 20 ? 'var(--threat-elevated)' :
+    score >= 5  ? 'var(--threat-moderate)' :
+    'var(--hairline)'
   return { width: `${Math.max(4, score)}%`, color }
 }
 
 const FeedCard = memo(function FeedCard({ item, score }: { item: ParsedFeedItem; score: number }) {
-  const rel = relBar(score)
-  const color = getSourceColor(item)
-  const hi = score > 15
+  const rel   = relevanceBar(score)
+  const color = SRC_COLORS[item.source] ?? 'var(--muted)'
+  const hi    = score > 15
 
   let ts = ''
   try { ts = formatDistanceToNow(new Date(item.pubDate), { addSuffix: true }) } catch { /* */ }
 
-  const handleClick = useCallback(() => { if (item.link) window.open(item.link, '_blank', 'noopener,noreferrer') }, [item.link])
+  const open = useCallback(() => { if (item.link) window.open(item.link, '_blank', 'noopener,noreferrer') }, [item.link])
 
   return (
     <div
-      className="feed-card px-3 py-2 fade-in"
+      className="feed-card fade-in px-4 py-3"
       style={{
-        borderBottom: '1px solid var(--border-light)',
-        borderLeft: hi ? `2px solid ${rel.color}` : '2px solid transparent',
+        borderBottom: '1px solid var(--hairline-soft)',
+        borderLeft: hi ? `3px solid ${rel.color}` : '3px solid transparent',
       }}
-      onClick={handleClick}
+      onClick={open}
       role={item.link ? 'link' : undefined}
       tabIndex={item.link ? 0 : undefined}
-      onKeyDown={e => e.key === 'Enter' && handleClick()}
+      onKeyDown={e => e.key === 'Enter' && open()}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex gap-2">
         {item.isYouTube && item.thumbnailUrl && (
-          <img src={item.thumbnailUrl} alt="" className="shrink-0 rounded" style={{ width: '56px', height: '32px', objectFit: 'cover', opacity: 0.7 }} loading="lazy" />
+          <img
+            src={item.thumbnailUrl} alt=""
+            style={{ width: '56px', height: '32px', objectFit: 'cover', borderRadius: 'var(--r-sm)', flexShrink: 0, opacity: 0.85 }}
+            loading="lazy"
+          />
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
             <span
-              className="font-terminal shrink-0 px-1 rounded-sm"
-              style={{ fontSize: '10px', background: `${color}18`, color, border: `1px solid ${color}30` }}
+              style={{
+                fontSize: '10px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
+                color, background: `${color}15`, border: `1px solid ${color}25`,
+                padding: '1px 6px', borderRadius: 'var(--r-pill)', flexShrink: 0,
+                fontFamily: 'var(--font-body)',
+              }}
             >
               {item.source}
             </span>
-            <span className="font-terminal shrink-0" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-              {ts}
-            </span>
+            <span style={{ fontSize: '11px', color: 'var(--muted-soft)', fontFamily: 'var(--font-body)' }}>{ts}</span>
           </div>
-          <div
-            className="font-terminal leading-snug mb-1.5 line-clamp-2"
-            style={{ fontSize: '11px', color: score > 3 ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+          <p
+            className="line-clamp-2"
+            style={{
+              fontSize: '13px', lineHeight: 1.45, fontFamily: 'var(--font-body)',
+              color: score > 3 ? 'var(--ink-soft)' : 'var(--muted)',
+              margin: '0 0 6px',
+            }}
           >
             {item.title}
-          </div>
-          <div className="relevance-bar">
-            <div className="relevance-fill" style={{ width: rel.width, background: rel.color }} />
+          </p>
+          <div className="rel-bar">
+            <div className="rel-fill" style={{ width: rel.width, background: rel.color }} />
           </div>
         </div>
       </div>
@@ -86,22 +88,23 @@ const FeedCard = memo(function FeedCard({ item, score }: { item: ParsedFeedItem;
 })
 
 export default function NewsFeed({ items, isLoading }: { items: ParsedFeedItem[]; isLoading: boolean }) {
-  const [tab, setTab] = useState<FeedTab>('ALL')
-  const [q, setQ] = useState('')
+  const [tab, setTab] = useState<Tab>('ALL')
+  const [q, setQ]     = useState('')
 
-  const scored = useMemo(() => items.map(item => ({
-    item,
-    score: scoreSignal({ id: item.id, source: item.sourceType as SourceType, text: item.description, title: item.title, date: item.pubDate }).score,
-  })).sort((a, b) => b.score !== a.score ? b.score - a.score : new Date(b.item.pubDate).getTime() - new Date(a.item.pubDate).getTime()),
+  const scored = useMemo(() =>
+    items.map(item => ({
+      item,
+      score: scoreSignal({ id: item.id, source: item.sourceType as SourceType, text: item.description, title: item.title, date: item.pubDate }).score,
+    })).sort((a, b) => b.score !== a.score ? b.score - a.score : new Date(b.item.pubDate).getTime() - new Date(a.item.pubDate).getTime()),
   [items])
 
   const filtered = useMemo(() => {
     let r = scored
     if (tab !== 'ALL') r = r.filter(({ item }) => {
-      if (tab === 'WHO/CDC') return ['WHO','CDC','ProMED','ECDC'].includes(item.sourceType)
-      if (tab === 'NEWS')    return item.sourceType === 'NewsChannel' && !item.isYouTube
+      if (tab === 'WHO/CDC')  return ['WHO','CDC','ProMED','ECDC'].includes(item.sourceType)
+      if (tab === 'NEWS')     return item.sourceType === 'NewsChannel' && !item.isYouTube
       if (tab === 'ACADEMIC') return item.sourceType === 'PubMed'
-      if (tab === 'YOUTUBE') return !!item.isYouTube
+      if (tab === 'YOUTUBE')  return !!item.isYouTube
       return true
     })
     if (q.trim()) {
@@ -111,68 +114,72 @@ export default function NewsFeed({ items, isLoading }: { items: ParsedFeedItem[]
     return r.slice(0, 100)
   }, [scored, tab, q])
 
-  const tabs: FeedTab[] = ['ALL', 'WHO/CDC', 'NEWS', 'ACADEMIC', 'YOUTUBE']
+  const tabs: Tab[] = ['ALL', 'WHO/CDC', 'NEWS', 'ACADEMIC', 'YOUTUBE']
 
   return (
-    <div className="panel flex flex-col h-full overflow-hidden" style={{ width: '310px', borderLeft: '1px solid var(--border)' }}>
+    <div
+      className="card flex flex-col h-full overflow-hidden"
+      style={{ width: '300px', borderRadius: 0, borderTop: 'none', borderBottom: 'none', borderRight: 'none', flexShrink: 0 }}
+    >
       {/* Header */}
-      <div className="px-3 py-2" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-highlight)' }}>
-        <div className="section-label">Live Intelligence Feed</div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex shrink-0 overflow-x-auto" style={{ borderBottom: '1px solid var(--border)' }}>
-        {tabs.map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className="px-3 py-1.5 font-terminal text-xs whitespace-nowrap transition-colors"
-            style={{
-              color: tab === t ? 'var(--accent-blue)' : 'var(--text-muted)',
-              borderBottom: tab === t ? '2px solid var(--accent-blue)' : '2px solid transparent',
-              background: 'transparent',
-              fontSize: '10px',
-              letterSpacing: '0.04em',
-              marginBottom: '-1px',
-            }}
-          >
-            {t}
-          </button>
-        ))}
+      <div className="px-4 pt-4 pb-0" style={{ borderBottom: '1px solid var(--hairline)' }}>
+        <div className="caption-up mb-3">Live Intelligence Feed</div>
+        {/* Tabs */}
+        <div className="flex gap-0 overflow-x-auto">
+          {tabs.map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              style={{
+                padding: '6px 12px 8px',
+                fontFamily: 'var(--font-body)',
+                fontSize: '12px', fontWeight: 500,
+                color: tab === t ? 'var(--ink)' : 'var(--muted)',
+                borderBottom: tab === t ? '2px solid var(--ink)' : '2px solid transparent',
+                background: 'none', marginBottom: '-1px',
+                transition: 'color 0.12s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Search */}
-      <div className="px-2 py-1.5 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="px-4 py-2.5" style={{ borderBottom: '1px solid var(--hairline)' }}>
         <input
           type="text"
-          placeholder="Filter signals..."
+          placeholder="Filter signals…"
           value={q}
           onChange={e => setQ(e.target.value)}
-          className="w-full font-terminal text-xs px-2 py-1 rounded"
           style={{
-            background: 'var(--bg-void)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-primary)',
-            outline: 'none',
-            fontSize: '11px',
+            width: '100%', padding: '7px 12px',
+            fontFamily: 'var(--font-body)', fontSize: '13px',
+            color: 'var(--ink)', background: 'var(--canvas-soft)',
+            border: '1px solid var(--hairline-strong)',
+            borderRadius: 'var(--r-md)', outline: 'none',
           }}
+          onFocus={e => (e.currentTarget.style.borderColor = 'var(--ink-soft)')}
+          onBlur={e => (e.currentTarget.style.borderColor = 'var(--hairline-strong)')}
         />
       </div>
 
-      {/* Feed */}
+      {/* Feed list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading && !filtered.length ? (
-          <div className="p-4 space-y-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-1.5">
-                <div className="skeleton h-2.5" style={{ width: '55%' }} />
-                <div className="skeleton h-2.5" />
-                <div className="skeleton h-1.5" style={{ width: '35%' }} />
+          <div className="p-4 space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="skeleton h-2.5" style={{ width: '45%' }} />
+                <div className="skeleton h-3" />
+                <div className="skeleton h-2.5" style={{ width: '65%' }} />
               </div>
             ))}
           </div>
         ) : !filtered.length ? (
-          <div className="p-6 text-center font-terminal text-xs" style={{ color: 'var(--text-muted)' }}>
+          <div className="p-8 text-center" style={{ color: 'var(--muted-soft)', fontSize: '13px', fontFamily: 'var(--font-body)' }}>
             No signals matching criteria
           </div>
         ) : (
@@ -182,11 +189,16 @@ export default function NewsFeed({ items, isLoading }: { items: ParsedFeedItem[]
 
       {/* Footer */}
       <div
-        className="px-3 py-1.5 font-terminal flex items-center gap-2 shrink-0"
-        style={{ fontSize: '10px', color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}
+        className="px-4 py-2 flex items-center gap-2 shrink-0"
+        style={{ borderTop: '1px solid var(--hairline)', background: 'var(--canvas-soft)' }}
       >
-        <span className="w-1.5 h-1.5 rounded-full dot-live" style={{ background: 'var(--threat-minimal)' }} />
-        {filtered.length} shown · {items.length} total
+        <span
+          className="pulse"
+          style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--sem-success)', display: 'inline-block' }}
+        />
+        <span style={{ fontSize: '11px', color: 'var(--muted-soft)', fontFamily: 'var(--font-body)' }}>
+          {filtered.length} shown · {items.length} total
+        </span>
       </div>
     </div>
   )

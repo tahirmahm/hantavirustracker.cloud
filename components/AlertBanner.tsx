@@ -11,79 +11,86 @@ interface AlertBannerProps {
   recentItems: ParsedFeedItem[]
 }
 
+function threatBadgeClass(level: string) {
+  const map: Record<string, string> = {
+    MINIMAL: 'badge-minimal', LOW: 'badge-low', MODERATE: 'badge-moderate',
+    ELEVATED: 'badge-elevated', HIGH: 'badge-high', CRITICAL: 'badge-critical',
+  }
+  return map[level] ?? 'badge'
+}
+
 export default function AlertBanner({ assessment, recentItems }: AlertBannerProps) {
   const alerts = useMemo(() => {
     const items: string[] = []
     if (assessment) {
-      items.push(`Global threat: ${assessment.globalThreatLevel} (${assessment.threatScore}/100)`)
       for (const e of assessment.convergenceEvents) {
-        items.push(`Convergence — ${e.location}: ${e.sourceCount} independent sources (${e.sources.join(', ')})`)
+        items.push(`Convergence — ${e.location}: ${e.sourceCount} sources (${e.sources.join(', ')})`)
       }
       if (assessment.hotspots[0]) {
         const t = assessment.hotspots[0]
-        items.push(`Top hotspot: ${t.country} · ${t.signalCount} signals · ${t.threatLevel}`)
+        items.push(`Top hotspot: ${t.country}  ·  ${t.signalCount} signals  ·  ${t.threatLevel}`)
       }
     }
-    for (const item of recentItems.slice(0, 10)) {
+    for (const item of recentItems.slice(0, 12)) {
       let ts = ''
       try { ts = formatDistanceToNow(new Date(item.pubDate), { addSuffix: true }) } catch { /* */ }
       items.push(`${item.source}: ${item.title}${ts ? '  ·  ' + ts : ''}`)
     }
-    if (!items.length) items.push('HantavirusTracker.cloud · Real-time global hantavirus surveillance · All feeds nominal')
+    if (!items.length) items.push('HantavirusTracker.cloud  ·  Real-time global hantavirus surveillance  ·  All feeds nominal')
     return items
   }, [assessment, recentItems])
 
-  const content = alerts.join('     ·     ')
-  const doubled = content + '     ·     ' + content
-  const threatColor = assessment ? getThreatColor(assessment.globalThreatLevel) : 'var(--accent-blue)'
+  const content = alerts.join('          ·          ')
+  const doubled = content + '          ·          ' + content
+  const level   = assessment?.globalThreatLevel ?? 'MINIMAL'
 
   return (
     <div
       className="flex items-center shrink-0 overflow-hidden"
       style={{
-        height: '36px',
-        background: 'var(--bg-panel)',
-        borderBottom: '1px solid var(--border)',
+        height: '40px',
+        background: 'var(--surface-card)',
+        borderBottom: '1px solid var(--hairline)',
       }}
       aria-live="polite"
     >
-      {/* Label */}
+      {/* Brand wordmark */}
       <div
-        className="shrink-0 flex items-center gap-2 px-3 h-full font-ui font-semibold text-xs"
-        style={{
-          background: 'var(--bg-highlight)',
-          borderRight: '1px solid var(--border)',
-          color: threatColor,
-          minWidth: '160px',
-          letterSpacing: '0.05em',
-        }}
+        className="shrink-0 flex items-center gap-2.5 px-4 h-full"
+        style={{ borderRight: '1px solid var(--hairline)', minWidth: '200px' }}
       >
         <span
-          className="w-1.5 h-1.5 rounded-full shrink-0 dot-live"
-          style={{ background: threatColor }}
-        />
-        HANTAVIRUS TRACKER
+          className="font-display italic"
+          style={{ fontSize: '15px', fontWeight: 400, color: 'var(--ink)', letterSpacing: '-0.01em' }}
+        >
+          HantavirusTracker
+        </span>
+        <span className="w-px h-4 self-center" style={{ background: 'var(--hairline-strong)' }} />
+        <span className={`badge ${threatBadgeClass(level)}`} style={{ fontSize: '10px' }}>{level}</span>
       </div>
 
       {/* Ticker */}
-      <div className="flex-1 overflow-hidden h-full flex items-center px-1">
-        <div className="ticker-inner font-terminal text-xs" style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
+      <div className="flex-1 overflow-hidden h-full flex items-center">
+        <div
+          className="ticker-inner"
+          style={{ fontSize: '12px', color: 'var(--body)', fontFamily: 'var(--font-body)', fontWeight: 400, letterSpacing: '0.01em' }}
+        >
           {doubled}
         </div>
       </div>
 
-      {/* Threat badge */}
+      {/* Score pill */}
       <div
-        className="shrink-0 px-3 h-full flex items-center font-ui font-semibold text-xs"
-        style={{
-          background: 'var(--bg-highlight)',
-          borderLeft: '1px solid var(--border)',
-          color: threatColor,
-          minWidth: '100px',
-          letterSpacing: '0.05em',
-        }}
+        className="shrink-0 flex items-center px-4 h-full gap-2"
+        style={{ borderLeft: '1px solid var(--hairline)', minWidth: '100px' }}
       >
-        {assessment?.globalThreatLevel ?? '—'}
+        <span style={{ fontSize: '11px', color: 'var(--muted)', fontFamily: 'var(--font-body)' }}>Score</span>
+        <span
+          className="font-display"
+          style={{ fontSize: '20px', fontWeight: 400, color: getThreatColor(level), letterSpacing: '-0.02em' }}
+        >
+          {assessment?.threatScore ?? '—'}
+        </span>
       </div>
     </div>
   )
