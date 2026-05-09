@@ -1,10 +1,5 @@
 {
   "framework": "nextjs",
-  "functions": {
-    "app/api/proxy/**": {
-      "runtime": "edge"
-    }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
