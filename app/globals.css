@@ -189,6 +189,24 @@ html, body {
 ::-webkit-scrollbar-thumb { background: var(--hairline-strong); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted-soft); }
 
+/* ── Responsive utilities ───────────────────────────────── */
+
+/* 100dvh accounts for mobile browser chrome (address bar, etc.) */
+@supports (height: 100dvh) {
+  .h-dvh { height: 100dvh; }
+}
+
+/* Let Leaflet control its own touch panning */
+.leaflet-container { touch-action: none; }
+
+@media (max-width: 767px) {
+  /* Prevent iOS text-size inflation on rotate */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+  /* Slightly more thumb-friendly feed cards */
+  .feed-card { padding-top: 14px !important; padding-bottom: 14px !important; }
+}
+
 /* ── Leaflet overrides ──────────────────────────────────── */
 .leaflet-control-attribution {
   background: rgba(12,10,9,0.7) !important;

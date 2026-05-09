@@ -12,6 +12,8 @@ interface MetricsPanelProps {
   hourlyActivity: number[]
   onHotspotSelect?: (hotspot: GeoHotspot) => void
   isLoading: boolean
+  /** fluid=true removes the fixed 264px width and flush border overrides */
+  fluid?: boolean
 }
 
 function AnimatedNumber({ target }: { target: number }) {
@@ -71,7 +73,7 @@ function threatBadgeClass(level: string) {
   return m[level] ?? 'badge'
 }
 
-export default function MetricsPanel({ assessment, sourceStatuses, hourlyActivity, onHotspotSelect, isLoading }: MetricsPanelProps) {
+export default function MetricsPanel({ assessment, sourceStatuses, hourlyActivity, onHotspotSelect, isLoading, fluid }: MetricsPanelProps) {
   const level  = assessment?.globalThreatLevel ?? 'MINIMAL'
   const score  = assessment?.threatScore ?? 0
   const color  = getThreatColor(level)
@@ -79,7 +81,7 @@ export default function MetricsPanel({ assessment, sourceStatuses, hourlyActivit
   return (
     <div
       className="card flex flex-col h-full overflow-hidden"
-      style={{ width: '264px', borderRadius: 0, borderTop: 'none', borderBottom: 'none', borderLeft: 'none', flexShrink: 0 }}
+      style={fluid ? { flexShrink: 0 } : { width: '264px', borderRadius: 0, borderTop: 'none', borderBottom: 'none', borderLeft: 'none', flexShrink: 0 }}
     >
       {/* Hero: threat score */}
       <div className="px-5 pt-5 pb-4" style={{ borderBottom: '1px solid var(--hairline)' }}>

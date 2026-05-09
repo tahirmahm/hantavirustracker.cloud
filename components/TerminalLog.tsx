@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 
-export default function TerminalLog({ lines }: { lines: string[] }) {
+export default function TerminalLog({ lines, fillHeight }: { lines: string[]; fillHeight?: boolean }) {
   const bottomRef   = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const autoScroll  = useRef(true)
@@ -13,9 +13,9 @@ export default function TerminalLog({ lines }: { lines: string[] }) {
 
   return (
     <div
-      className="shrink-0 flex flex-col"
+      className="flex flex-col"
       style={{
-        height: '140px',
+        ...(fillHeight ? { flex: 1, minHeight: 0 } : { height: '140px', flexShrink: 0 }),
         background: 'var(--surface-dark)',
         borderTop: '1px solid #2a2521',
       }}

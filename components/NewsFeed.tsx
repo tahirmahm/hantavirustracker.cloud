@@ -87,7 +87,7 @@ const FeedCard = memo(function FeedCard({ item, score }: { item: ParsedFeedItem;
   )
 })
 
-export default function NewsFeed({ items, isLoading }: { items: ParsedFeedItem[]; isLoading: boolean }) {
+export default function NewsFeed({ items, isLoading, fluid }: { items: ParsedFeedItem[]; isLoading: boolean; fluid?: boolean }) {
   const [tab, setTab] = useState<Tab>('ALL')
   const [q, setQ]     = useState('')
 
@@ -119,7 +119,7 @@ export default function NewsFeed({ items, isLoading }: { items: ParsedFeedItem[]
   return (
     <div
       className="card flex flex-col h-full overflow-hidden"
-      style={{ width: '300px', borderRadius: 0, borderTop: 'none', borderBottom: 'none', borderRight: 'none', flexShrink: 0 }}
+      style={fluid ? { flexShrink: 0 } : { width: '300px', borderRadius: 0, borderTop: 'none', borderBottom: 'none', borderRight: 'none', flexShrink: 0 }}
     >
       {/* Header */}
       <div className="px-4 pt-4 pb-0" style={{ borderBottom: '1px solid var(--hairline)' }}>

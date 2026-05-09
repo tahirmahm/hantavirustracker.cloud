@@ -9,6 +9,8 @@ import { formatDistanceToNow } from 'date-fns'
 interface AlertBannerProps {
   assessment: ThreatAssessment | null
   recentItems: ParsedFeedItem[]
+  /** compact=true hides the ticker — used on mobile */
+  compact?: boolean
 }
 
 function threatBadgeClass(level: string) {
@@ -19,7 +21,7 @@ function threatBadgeClass(level: string) {
   return map[level] ?? 'badge'
 }
 
-export default function AlertBanner({ assessment, recentItems }: AlertBannerProps) {
+export default function AlertBanner({ assessment, recentItems, compact }: AlertBannerProps) {
   const alerts = useMemo(() => {
     const items: string[] = []
     if (assessment) {
@@ -69,15 +71,17 @@ export default function AlertBanner({ assessment, recentItems }: AlertBannerProp
         <span className={`badge ${threatBadgeClass(level)}`} style={{ fontSize: '10px' }}>{level}</span>
       </div>
 
-      {/* Ticker */}
-      <div className="flex-1 overflow-hidden h-full flex items-center">
-        <div
-          className="ticker-inner"
-          style={{ fontSize: '12px', color: 'var(--body)', fontFamily: 'var(--font-body)', fontWeight: 400, letterSpacing: '0.01em' }}
-        >
-          {doubled}
+      {/* Ticker — hidden on compact/mobile */}
+      {!compact && (
+        <div className="flex-1 overflow-hidden h-full flex items-center">
+          <div
+            className="ticker-inner"
+            style={{ fontSize: '12px', color: 'var(--body)', fontFamily: 'var(--font-body)', fontWeight: 400, letterSpacing: '0.01em' }}
+          >
+            {doubled}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Score pill */}
       <div
