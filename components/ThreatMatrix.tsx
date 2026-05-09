@@ -3,66 +3,71 @@
 import type { ThreatAssessment } from '@/lib/threatClassifier'
 import { getThreatColor } from '@/lib/threatClassifier'
 
+const LEVELS = ['MINIMAL', 'LOW', 'MODERATE', 'ELEVATED', 'HIGH', 'CRITICAL'] as const
+
 interface ThreatMatrixProps {
   assessment: ThreatAssessment | null
+  compact?: boolean
 }
 
-const THREAT_LEVELS = ['MINIMAL', 'LOW', 'MODERATE', 'ELEVATED', 'HIGH', 'CRITICAL'] as const
-
-export default function ThreatMatrix({ assessment }: ThreatMatrixProps) {
+export default function ThreatMatrix({ assessment, compact }: ThreatMatrixProps) {
   const current = assessment?.globalThreatLevel ?? 'MINIMAL'
   const score = assessment?.threatScore ?? 0
-  const currentIdx = THREAT_LEVELS.indexOf(current)
+  const idx = LEVELS.indexOf(current)
 
-  return (
-    <div className="p-3" style={{ borderBottom: '1px solid var(--bg-panel-border)' }}>
-      <div className="font-ui text-xs mb-2" style={{ color: '#4a5568', letterSpacing: '0.1em' }}>
-        THREAT MATRIX
-      </div>
-      <div className="space-y-1">
-        {THREAT_LEVELS.map((level, idx) => {
+  if (compact) {
+    // Horizontal segmented bar
+    return (
+      <div className="flex gap-1 mt-2">
+        {LEVELS.map((level, i) => {
           const color = getThreatColor(level)
-          const isActive = level === current
-          const isPast = idx < currentIdx
-
+          const active = i === idx
+          const past = i < idx
           return (
             <div
               key={level}
-              className="flex items-center gap-2"
-              style={{ opacity: isPast ? 0.4 : 1 }}
-            >
-              <div
-                className="w-2 h-2 rounded-sm shrink-0"
-                style={{
-                  background: isActive ? color : 'transparent',
-                  border: `1px solid ${color}`,
-                  boxShadow: isActive ? `0 0 6px ${color}` : 'none',
-                }}
-              />
-              <div className="flex-1">
-                <div
-                  className="h-1 rounded-full"
-                  style={{
-                    background: `linear-gradient(to right, ${color}${isActive ? 'cc' : '33'}, transparent)`,
-                    width: isActive ? `${Math.max(20, score)}%` : isPast ? '100%' : '0%',
-                    transition: 'width 0.5s ease',
-                  }}
-                />
-              </div>
-              <div
-                className="font-display text-xs shrink-0"
-                style={{
-                  color: isActive ? color : '#4a5568',
-                  fontSize: '9px',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                {level}
-              </div>
-            </div>
+              className="flex-1 rounded-sm"
+              style={{
+                height: '4px',
+                background: active || past ? color : 'var(--border)',
+                opacity: past ? 0.4 : 1,
+              }}
+            />
           )
         })}
       </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {LEVELS.map((level, i) => {
+        const color = getThreatColor(level)
+        const active = level === current
+        const past = i < idx
+        return (
+          <div key={level} className="flex items-center gap-2" style={{ opacity: past ? 0.45 : 1 }}>
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: active ? color : 'var(--border)' }}
+            />
+            <div className="flex-1" style={{ height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: active ? `${Math.max(15, score)}%` : past ? '100%' : '0%',
+                  background: color,
+                  borderRadius: '2px',
+                  transition: 'width 0.5s ease',
+                }}
+              />
+            </div>
+            <span className="font-terminal shrink-0" style={{ fontSize: '9px', color: active ? color : 'var(--text-muted)', minWidth: '56px', letterSpacing: '0.05em' }}>
+              {level}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }

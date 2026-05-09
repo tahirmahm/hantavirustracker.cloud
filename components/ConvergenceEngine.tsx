@@ -3,42 +3,24 @@
 import type { ConvergenceEvent } from '@/lib/threatClassifier'
 import { formatDistanceToNow } from 'date-fns'
 
-interface ConvergenceEngineProps {
-  events: ConvergenceEvent[]
-}
-
-export default function ConvergenceEngine({ events }: ConvergenceEngineProps) {
-  if (events.length === 0) return null
-
+export default function ConvergenceEngine({ events }: { events: ConvergenceEvent[] }) {
+  if (!events.length) return null
   return (
-    <div
-      className="mx-2 mb-2 p-2 rounded"
-      style={{
-        background: 'rgba(255,107,0,0.06)',
-        border: '1px solid rgba(255,107,0,0.3)',
-      }}
-    >
-      <div
-        className="font-display text-xs mb-2 tracking-wider"
-        style={{ color: '#ff6b00' }}
-      >
-        ⚠ SIGNAL CONVERGENCE DETECTED
-      </div>
+    <div className="space-y-1.5">
       {events.map(e => {
-        let timeStr = ''
-        try { timeStr = formatDistanceToNow(new Date(e.lastSeen), { addSuffix: true }) } catch { /* ignore */ }
-
+        let ts = ''
+        try { ts = formatDistanceToNow(new Date(e.lastSeen), { addSuffix: true }) } catch { /* */ }
         return (
-          <div key={e.location} className="mb-2 last:mb-0">
-            <div className="flex justify-between items-baseline">
-              <span className="font-terminal text-xs" style={{ color: '#e8edf5' }}>
-                {e.location}
-              </span>
-              <span className="font-terminal" style={{ fontSize: '10px', color: '#4a5568' }}>
-                {timeStr}
-              </span>
+          <div
+            key={e.location}
+            className="px-2 py-1.5 rounded text-xs"
+            style={{ background: 'rgba(224,123,57,0.1)', border: '1px solid rgba(224,123,57,0.25)' }}
+          >
+            <div className="flex justify-between items-baseline mb-0.5">
+              <span className="font-ui font-semibold" style={{ color: 'var(--accent-orange)' }}>{e.location}</span>
+              <span className="font-terminal" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{ts}</span>
             </div>
-            <div className="font-terminal mt-0.5" style={{ fontSize: '10px', color: '#ff6b00' }}>
+            <div className="font-terminal" style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
               {e.sourceCount} independent sources: {e.sources.join(' · ')}
             </div>
           </div>

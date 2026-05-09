@@ -14,87 +14,76 @@ interface AlertBannerProps {
 export default function AlertBanner({ assessment, recentItems }: AlertBannerProps) {
   const alerts = useMemo(() => {
     const items: string[] = []
-
     if (assessment) {
-      items.push(`▶ GLOBAL THREAT LEVEL: ${assessment.globalThreatLevel} · Score: ${assessment.threatScore}/100`)
-      if (assessment.convergenceEvents.length > 0) {
-        for (const e of assessment.convergenceEvents) {
-          items.push(`▶ CONVERGENCE EVENT: ${e.location} · ${e.sourceCount} independent sources · ${e.sources.join(', ')}`)
-        }
+      items.push(`Global threat: ${assessment.globalThreatLevel} (${assessment.threatScore}/100)`)
+      for (const e of assessment.convergenceEvents) {
+        items.push(`Convergence — ${e.location}: ${e.sourceCount} independent sources (${e.sources.join(', ')})`)
       }
-      if (assessment.hotspots.length > 0) {
-        const top = assessment.hotspots[0]
-        items.push(`▶ TOP HOTSPOT: ${top.country} · ${top.signalCount} signals · Threat: ${top.threatLevel}`)
+      if (assessment.hotspots[0]) {
+        const t = assessment.hotspots[0]
+        items.push(`Top hotspot: ${t.country} · ${t.signalCount} signals · ${t.threatLevel}`)
       }
     }
-
-    for (const item of recentItems.slice(0, 8)) {
-      let prefix = '▶'
-      const ts = (() => {
-        try { return formatDistanceToNow(new Date(item.pubDate), { addSuffix: true }) } catch { return '' }
-      })()
-      items.push(`${prefix} ${item.source}: ${item.title}${ts ? ' · ' + ts : ''}`)
+    for (const item of recentItems.slice(0, 10)) {
+      let ts = ''
+      try { ts = formatDistanceToNow(new Date(item.pubDate), { addSuffix: true }) } catch { /* */ }
+      items.push(`${item.source}: ${item.title}${ts ? '  ·  ' + ts : ''}`)
     }
-
-    if (items.length === 0) {
-      items.push('▶ HANTAVIRUS TRACKER CLOUD · Real-time global surveillance active · All systems nominal')
-    }
-
+    if (!items.length) items.push('HantavirusTracker.cloud · Real-time global hantavirus surveillance · All feeds nominal')
     return items
   }, [assessment, recentItems])
 
-  const tickerContent = alerts.join('          ')
-  const doubledContent = `${tickerContent}          ${tickerContent}`
-  const threatColor = assessment ? getThreatColor(assessment.globalThreatLevel) : '#00d4ff'
+  const content = alerts.join('     ·     ')
+  const doubled = content + '     ·     ' + content
+  const threatColor = assessment ? getThreatColor(assessment.globalThreatLevel) : 'var(--accent-blue)'
 
   return (
     <div
       className="flex items-center shrink-0 overflow-hidden"
       style={{
-        height: '40px',
-        background: '#080c12',
-        borderBottom: `1px solid ${threatColor}22`,
+        height: '36px',
+        background: 'var(--bg-panel)',
+        borderBottom: '1px solid var(--border)',
       }}
       aria-live="polite"
-      aria-label="Live threat alerts ticker"
     >
-      {/* Left label */}
+      {/* Label */}
       <div
-        className="shrink-0 flex items-center gap-2 px-3 h-full font-display text-xs"
+        className="shrink-0 flex items-center gap-2 px-3 h-full font-ui font-semibold text-xs"
         style={{
-          background: `${threatColor}18`,
-          borderRight: `1px solid ${threatColor}44`,
+          background: 'var(--bg-highlight)',
+          borderRight: '1px solid var(--border)',
           color: threatColor,
-          minWidth: '180px',
-          letterSpacing: '0.1em',
+          minWidth: '160px',
+          letterSpacing: '0.05em',
         }}
       >
         <span
-          className="w-2 h-2 rounded-full shrink-0 dot-live"
-          style={{ background: threatColor, boxShadow: `0 0 6px ${threatColor}` }}
+          className="w-1.5 h-1.5 rounded-full shrink-0 dot-live"
+          style={{ background: threatColor }}
         />
         HANTAVIRUS TRACKER
       </div>
 
-      {/* Scrolling ticker */}
-      <div className="flex-1 overflow-hidden h-full flex items-center">
-        <div className="ticker-inner font-terminal text-xs" style={{ color: '#e8edf5' }}>
-          {doubledContent}
+      {/* Ticker */}
+      <div className="flex-1 overflow-hidden h-full flex items-center px-1">
+        <div className="ticker-inner font-terminal text-xs" style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
+          {doubled}
         </div>
       </div>
 
-      {/* Right: threat level badge */}
+      {/* Threat badge */}
       <div
-        className="shrink-0 flex items-center px-3 h-full font-display text-xs"
+        className="shrink-0 px-3 h-full flex items-center font-ui font-semibold text-xs"
         style={{
-          background: `${threatColor}18`,
-          borderLeft: `1px solid ${threatColor}44`,
+          background: 'var(--bg-highlight)',
+          borderLeft: '1px solid var(--border)',
           color: threatColor,
-          letterSpacing: '0.1em',
-          minWidth: '120px',
+          minWidth: '100px',
+          letterSpacing: '0.05em',
         }}
       >
-        THREAT: {assessment?.globalThreatLevel ?? '---'}
+        {assessment?.globalThreatLevel ?? '—'}
       </div>
     </div>
   )
