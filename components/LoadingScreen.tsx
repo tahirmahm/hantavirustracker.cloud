@@ -2,51 +2,34 @@
 
 import { useEffect, useState } from 'react'
 
-const TITLE = 'HANTAVIRUS TRACKER'
-const SUBTITLE = 'GLOBAL OSINT SURVEILLANCE DASHBOARD'
+const TITLE    = 'HantavirusTracker'
+const SUBTITLE = 'Global Epidemiological Surveillance'
 
 export default function LoadingScreen({ onDone }: { onDone: () => void }) {
-  const [titleChars, setTitleChars] = useState(0)
-  const [subtitleChars, setSubtitleChars] = useState(0)
-  const [showProgress, setShowProgress] = useState(false)
+  const [chars, setChars]   = useState(0)
+  const [showSub, setShowSub] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [done, setDone] = useState(false)
+  const [done, setDone]     = useState(false)
 
   useEffect(() => {
-    // Type title
     let t = 0
-    const titleInterval = setInterval(() => {
-      t++
-      setTitleChars(t)
+    const ti = setInterval(() => {
+      t++; setChars(t)
       if (t >= TITLE.length) {
-        clearInterval(titleInterval)
-        // Then type subtitle
-        let s = 0
-        const subInterval = setInterval(() => {
-          s++
-          setSubtitleChars(s)
-          if (s >= SUBTITLE.length) {
-            clearInterval(subInterval)
-            setShowProgress(true)
-            // Progress bar
-            let p = 0
-            const progressInterval = setInterval(() => {
-              p += Math.random() * 12 + 4
-              setProgress(Math.min(100, p))
-              if (p >= 100) {
-                clearInterval(progressInterval)
-                setTimeout(() => {
-                  setDone(true)
-                  onDone()
-                }, 300)
-              }
-            }, 80)
+        clearInterval(ti)
+        setTimeout(() => setShowSub(true), 200)
+        let p = 0
+        const pi = setInterval(() => {
+          p += Math.random() * 9 + 3
+          setProgress(Math.min(100, p))
+          if (p >= 100) {
+            clearInterval(pi)
+            setTimeout(() => { setDone(true); onDone() }, 300)
           }
-        }, 30)
+        }, 90)
       }
     }, 60)
-
-    return () => clearInterval(titleInterval)
+    return () => clearInterval(ti)
   }, [onDone])
 
   if (done) return null
@@ -54,81 +37,45 @@ export default function LoadingScreen({ onDone }: { onDone: () => void }) {
   return (
     <div
       className="fixed inset-0 flex flex-col items-center justify-center z-50"
-      style={{ background: '#040608' }}
+      style={{ background: 'var(--canvas)' }}
     >
-      {/* Grid lines */}
-      <div
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: 'linear-gradient(rgba(0,212,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.3) 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
-        }}
-      />
+      {/* Pastel orbs */}
+      <div className="orb" style={{ width: '400px', height: '400px', background: 'radial-gradient(circle, var(--orb-sky) 0%, transparent 70%)', top: '-100px', left: '-80px', opacity: 0.5 }} />
+      <div className="orb" style={{ width: '300px', height: '300px', background: 'radial-gradient(circle, var(--orb-lavender) 0%, transparent 70%)', bottom: '-60px', right: '-40px', opacity: 0.5 }} />
 
-      <div className="relative text-center z-10">
-        {/* Biohazard-style decorative circle */}
-        <div
-          className="mx-auto mb-8 w-20 h-20 rounded-full border-2 flex items-center justify-center"
-          style={{
-            borderColor: 'rgba(0,212,255,0.4)',
-            boxShadow: '0 0 40px rgba(0,212,255,0.2)',
-          }}
-        >
-          <div
-            className="w-12 h-12 rounded-full border"
-            style={{
-              borderColor: 'rgba(0,212,255,0.6)',
-              boxShadow: '0 0 20px rgba(0,212,255,0.3)',
-            }}
-          />
-        </div>
-
-        {/* Title */}
+      <div style={{ textAlign: 'center', maxWidth: '420px', padding: '0 32px', position: 'relative', zIndex: 1 }}>
+        {/* Wordmark */}
         <h1
-          className="font-display text-4xl font-black tracking-widest mb-3"
-          style={{
-            color: '#00d4ff',
-            textShadow: '0 0 30px rgba(0,212,255,0.5)',
-            letterSpacing: '0.2em',
-            minHeight: '2.5rem',
-          }}
+          className="font-display"
+          style={{ fontSize: '40px', fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--ink)', marginBottom: '8px', minHeight: '52px', lineHeight: 1.1 }}
         >
-          {TITLE.slice(0, titleChars)}
-          {titleChars < TITLE.length && (
-            <span style={{ opacity: Math.floor(Date.now() / 300) % 2 === 0 ? 1 : 0 }}>█</span>
-          )}
+          {TITLE.slice(0, chars)}
+          {chars < TITLE.length && <span style={{ opacity: 0.3 }}>|</span>}
         </h1>
 
-        {/* Subtitle */}
-        <div
-          className="font-terminal text-sm tracking-widest mb-8"
-          style={{ color: '#4a5568', minHeight: '1.5rem', letterSpacing: '0.15em' }}
+        <p
+          style={{
+            fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--muted)',
+            letterSpacing: '0.04em', minHeight: '20px', marginBottom: '32px',
+            opacity: showSub ? 1 : 0, transition: 'opacity 0.4s',
+          }}
         >
-          {SUBTITLE.slice(0, subtitleChars)}
-        </div>
+          {SUBTITLE}
+        </p>
 
-        {/* Progress bar */}
-        {showProgress && (
-          <div className="w-64 mx-auto">
-            <div
-              className="h-px mb-2"
-              style={{ background: 'var(--bg-panel-border)' }}
-            >
-              <div
-                className="h-full transition-all duration-100"
-                style={{
-                  width: `${progress}%`,
-                  background: 'linear-gradient(to right, #00d4ff, #00ff88)',
-                  boxShadow: '0 0 8px rgba(0,212,255,0.6)',
-                }}
-              />
+        {/* Progress */}
+        {showSub && (
+          <div>
+            <div style={{ height: '1px', background: 'var(--hairline)', borderRadius: '1px', overflow: 'hidden', marginBottom: '8px' }}>
+              <div style={{
+                height: '100%', width: `${progress}%`,
+                background: 'var(--ink)', borderRadius: '1px',
+                transition: 'width 0.1s ease',
+              }} />
             </div>
-            <div className="font-terminal text-xs text-center" style={{ color: '#4a5568' }}>
-              {progress < 30 ? 'LOADING FEED PARSERS...' :
-               progress < 60 ? 'INITIALIZING GLOBE...' :
-               progress < 85 ? 'CONNECTING SOURCES...' :
-               'READY'}
-            </div>
+            <p style={{ fontSize: '11px', color: 'var(--muted-soft)', fontFamily: 'var(--font-body)', letterSpacing: '0.04em' }}>
+              {progress < 30 ? 'Loading feed parsers…' : progress < 60 ? 'Initializing map…' : progress < 85 ? 'Connecting sources…' : 'Ready'}
+            </p>
           </div>
         )}
       </div>

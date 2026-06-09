@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import type { ThreatAssessment, GeoHotspot } from '@/lib/threatClassifier'
-import { getThreatColor, getThreatGlowClass } from '@/lib/threatClassifier'
+import { getThreatColor } from '@/lib/threatClassifier'
 import type { SourceStatus } from '@/hooks/useDataRefresh'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -12,300 +12,188 @@ interface MetricsPanelProps {
   hourlyActivity: number[]
   onHotspotSelect?: (hotspot: GeoHotspot) => void
   isLoading: boolean
+  /** fluid=true removes the fixed 264px width and flush border overrides */
+  fluid?: boolean
 }
 
-function AnimatedScore({ target }: { target: number }) {
-  const [display, setDisplay] = useState(0)
-  const prevRef = useRef(0)
-
+function AnimatedNumber({ target }: { target: number }) {
+  const [d, setD] = useState(0)
+  const prev = useRef(0)
   useEffect(() => {
-    const start = prevRef.current
-    const end = target
-    const duration = 800
-    const startTime = Date.now()
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime
-      const progress = Math.min(1, elapsed / duration)
-      const eased = 1 - Math.pow(1 - progress, 3)
-      const value = Math.round(start + (end - start) * eased)
-      setDisplay(value)
-      if (progress < 1) requestAnimationFrame(animate)
-      else prevRef.current = end
+    const s = prev.current, t0 = Date.now()
+    const raf = () => {
+      const p = Math.min(1, (Date.now() - t0) / 700)
+      const e = 1 - Math.pow(1 - p, 3)
+      setD(Math.round(s + (target - s) * e))
+      if (p < 1) requestAnimationFrame(raf)
+      else prev.current = target
     }
-
-    requestAnimationFrame(animate)
+    requestAnimationFrame(raf)
   }, [target])
-
-  return <>{display}</>
+  return <>{d}</>
 }
 
 function Sparkline({ data }: { data: number[] }) {
   const max = Math.max(...data, 1)
-  const width = 240
-  const height = 32
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width
-    const y = height - (v / max) * height
-    return `${x},${y}`
-  }).join(' ')
-
+  const w = 220, h = 32
+  const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - (v / max) * (h - 2) - 1}`).join(' ')
   return (
-    <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
-      <polyline
-        points={pts}
-        fill="none"
-        stroke="#00d4ff"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-        opacity="0.7"
-      />
-      <polyline
-        points={`0,${height} ${pts} ${width},${height}`}
-        fill="url(#sparkGrad)"
-        opacity="0.2"
-      />
+    <svg width={w} height={h} style={{ display: 'block' }}>
       <defs>
-        <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#00d4ff" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="#00d4ff" stopOpacity="0" />
+        <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#2563eb" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
         </linearGradient>
       </defs>
+      <polyline points={`0,${h} ${pts} ${w},${h}`} fill="url(#sg)" />
+      <polyline points={pts} fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   )
 }
 
 function StatusDot({ status }: { status: SourceStatus['status'] }) {
   const color =
-    status === 'live' ? '#00ff88' :
-    status === 'loading' ? '#00d4ff' :
-    status === 'stale' ? '#f0c040' :
-    status === 'error' ? '#ff2040' : '#4a5568'
-
-  const pulse = status === 'live' || status === 'loading'
-
+    status === 'live'    ? 'var(--sem-success)' :
+    status === 'loading' ? '#2563eb' :
+    status === 'stale'   ? 'var(--threat-moderate)' :
+    status === 'error'   ? 'var(--sem-error)' : 'var(--muted-soft)'
   return (
     <span
-      className={`w-2 h-2 rounded-full inline-block shrink-0 ${pulse ? 'dot-live' : ''}`}
-      style={{ background: color, boxShadow: `0 0 4px ${color}` }}
+      className={status === 'live' ? 'pulse' : ''}
+      style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: color, flexShrink: 0 }}
     />
   )
 }
 
-export default function MetricsPanel({
-  assessment,
-  sourceStatuses,
-  hourlyActivity,
-  onHotspotSelect,
-  isLoading,
-}: MetricsPanelProps) {
-  const level = assessment?.globalThreatLevel ?? 'MINIMAL'
-  const score = assessment?.threatScore ?? 0
-  const threatColor = getThreatColor(level)
-  const glowClass = getThreatGlowClass(level)
+function threatBadgeClass(level: string) {
+  const m: Record<string, string> = {
+    MINIMAL: 'badge-minimal', LOW: 'badge-low', MODERATE: 'badge-moderate',
+    ELEVATED: 'badge-elevated', HIGH: 'badge-high', CRITICAL: 'badge-critical',
+  }
+  return m[level] ?? 'badge'
+}
+
+export default function MetricsPanel({ assessment, sourceStatuses, hourlyActivity, onHotspotSelect, isLoading, fluid }: MetricsPanelProps) {
+  const level  = assessment?.globalThreatLevel ?? 'MINIMAL'
+  const score  = assessment?.threatScore ?? 0
+  const color  = getThreatColor(level)
 
   return (
     <div
-      className="panel panel-corners flex flex-col h-full overflow-hidden"
-      style={{ width: '280px', borderRight: '1px solid var(--bg-panel-border)' }}
+      className="card flex flex-col h-full overflow-hidden"
+      style={fluid ? { flexShrink: 0 } : { width: '264px', borderRadius: 0, borderTop: 'none', borderBottom: 'none', borderLeft: 'none', flexShrink: 0 }}
     >
-      {/* Header */}
-      <div
-        className="px-3 py-2 font-display text-xs tracking-widest shrink-0"
-        style={{
-          color: '#00d4ff',
-          borderBottom: '1px solid var(--bg-panel-border)',
-          background: 'rgba(0,212,255,0.04)',
-        }}
-      >
-        INTELLIGENCE OVERVIEW
+      {/* Hero: threat score */}
+      <div className="px-5 pt-5 pb-4" style={{ borderBottom: '1px solid var(--hairline)' }}>
+        {/* Orb decoration */}
+        <div style={{ position: 'relative' }}>
+          <div
+            className="orb"
+            style={{ width: '160px', height: '160px', background: `radial-gradient(circle, var(--orb-sky) 0%, transparent 70%)`, top: '-40px', right: '-40px', opacity: 0.4 }}
+          />
+        </div>
+
+        <div className="caption-up mb-3">Threat Assessment</div>
+
+        <div className="flex items-end gap-2 mb-2">
+          <div
+            className="font-display"
+            style={{ fontSize: '64px', fontWeight: 400, lineHeight: 1, letterSpacing: '-0.04em', color }}
+          >
+            {isLoading ? <span className="skeleton inline-block" style={{ width: '80px', height: '60px' }} /> : <AnimatedNumber target={score} />}
+          </div>
+          <div className="mb-2">
+            <div style={{ fontSize: '11px', color: 'var(--muted)', fontFamily: 'var(--font-body)', marginBottom: '4px' }}>/ 100</div>
+          </div>
+        </div>
+
+        <span className={`badge ${threatBadgeClass(level)}`}>{level}</span>
+
+        {/* Progress bar */}
+        <div style={{ marginTop: '12px', height: '3px', background: 'var(--hairline)', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${score}%`, background: color, borderRadius: '2px', transition: 'width 0.6s ease' }} />
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* Global Threat Score */}
-        <div
-          className="p-4 shrink-0"
-          style={{ borderBottom: '1px solid var(--bg-panel-border)' }}
-        >
-          <div className="font-ui text-xs mb-1" style={{ color: '#4a5568', letterSpacing: '0.1em' }}>
-            GLOBAL THREAT SCORE
+      {/* Quick stats */}
+      <div className="grid grid-cols-2" style={{ borderBottom: '1px solid var(--hairline)', background: 'var(--canvas-soft)' }}>
+        {[
+          { label: 'Hotspots', value: assessment?.hotspots.length ?? 0 },
+          { label: 'Signals', value: assessment?.signalCount ?? 0 },
+        ].map(({ label, value }) => (
+          <div key={label} className="px-4 py-3" style={{ borderRight: label === 'Hotspots' ? '1px solid var(--hairline)' : undefined }}>
+            <div className="caption-up mb-1">{label}</div>
+            <div className="font-display" style={{ fontSize: '28px', fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--ink)' }}>{value}</div>
           </div>
-          <div
-            className={`font-display text-6xl font-black leading-none ${glowClass}`}
-            style={{ letterSpacing: '-0.02em' }}
-          >
-            {isLoading ? (
-              <span className="skeleton inline-block w-24 h-16" />
-            ) : (
-              <AnimatedScore target={score} />
-            )}
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            <span
-              className="w-2 h-2 rounded-full dot-live"
-              style={{ background: threatColor, boxShadow: `0 0 6px ${threatColor}` }}
-            />
-            <span
-              className="font-display text-xs tracking-widest"
-              style={{ color: threatColor }}
-            >
-              {level}
-            </span>
-          </div>
-        </div>
+        ))}
+      </div>
 
-        {/* Stats row */}
-        <div
-          className="grid grid-cols-2 gap-px shrink-0"
-          style={{ borderBottom: '1px solid var(--bg-panel-border)', background: 'var(--bg-panel-border)' }}
-        >
-          <div className="p-3" style={{ background: 'var(--bg-panel)' }}>
-            <div className="font-ui text-xs mb-1" style={{ color: '#4a5568' }}>HOTSPOTS</div>
-            <div className="font-display text-xl" style={{ color: '#00d4ff' }}>
-              {assessment?.hotspots.length ?? 0}
-            </div>
-          </div>
-          <div className="p-3" style={{ background: 'var(--bg-panel)' }}>
-            <div className="font-ui text-xs mb-1" style={{ color: '#4a5568' }}>SIGNALS</div>
-            <div className="font-display text-xl" style={{ color: '#00ff88' }}>
-              {assessment?.signalCount ?? 0}
-            </div>
-          </div>
-        </div>
+      {/* Sparkline */}
+      <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--hairline)' }}>
+        <div className="caption-up mb-2">24h Signal Activity</div>
+        <Sparkline data={hourlyActivity} />
+      </div>
 
-        {/* Hourly activity sparkline */}
-        <div
-          className="p-3 shrink-0"
-          style={{ borderBottom: '1px solid var(--bg-panel-border)' }}
-        >
-          <div className="font-ui text-xs mb-2" style={{ color: '#4a5568', letterSpacing: '0.1em' }}>
-            24H ACTIVITY
-          </div>
-          <Sparkline data={hourlyActivity} />
-        </div>
-
-        {/* Source statuses */}
-        <div
-          className="p-3 shrink-0"
-          style={{ borderBottom: '1px solid var(--bg-panel-border)' }}
-        >
-          <div className="font-ui text-xs mb-2" style={{ color: '#4a5568', letterSpacing: '0.1em' }}>
-            INTELLIGENCE SOURCES
-          </div>
-          <div className="space-y-2">
-            {sourceStatuses.map(src => (
-              <div key={src.key} className="flex items-center gap-2">
-                <StatusDot status={src.status} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-terminal text-xs truncate" style={{ color: '#e8edf5' }}>
-                    {src.name}
-                  </div>
-                  {src.lastFetch && (
-                    <div className="font-terminal" style={{ fontSize: '10px', color: '#4a5568' }}>
-                      {(() => {
-                        try { return formatDistanceToNow(new Date(src.lastFetch), { addSuffix: true }) } catch { return '' }
-                      })()}
-                    </div>
-                  )}
-                </div>
-                <div className="font-terminal text-xs shrink-0" style={{ color: '#4a5568' }}>
-                  {src.itemCount > 0 ? src.itemCount : '—'}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Hotspot rankings */}
-        {assessment && assessment.hotspots.length > 0 && (
-          <div
-            className="p-3 shrink-0"
-            style={{ borderBottom: '1px solid var(--bg-panel-border)' }}
-          >
-            <div className="font-ui text-xs mb-2" style={{ color: '#4a5568', letterSpacing: '0.1em' }}>
-              TOP HOTSPOTS
-            </div>
-            <div className="space-y-2">
-              {assessment.hotspots.slice(0, 5).map((hs, i) => {
-                const color = getThreatColor(hs.threatLevel)
-                return (
-                  <button
-                    key={hs.country}
-                    className="w-full text-left hover:opacity-80 transition-opacity"
-                    onClick={() => onHotspotSelect?.(hs)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="font-terminal text-xs" style={{ color: '#4a5568', minWidth: '14px' }}>
-                        {i + 1}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-baseline">
-                          <span className="font-terminal text-xs truncate" style={{ color: '#e8edf5' }}>
-                            {hs.country}
-                          </span>
-                          <span className="font-display text-xs shrink-0 ml-2" style={{ color }}>
-                            {Math.round(hs.score)}
-                          </span>
-                        </div>
-                        <div
-                          className="h-px mt-1"
-                          style={{
-                            background: `linear-gradient(to right, ${color}66, transparent)`,
-                            width: `${hs.intensity * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Convergence alerts */}
-        {assessment && assessment.convergenceEvents.length > 0 && (
-          <div className="p-3 shrink-0">
+      {/* Sources */}
+      <div style={{ borderBottom: '1px solid var(--hairline)' }}>
+        <div className="caption-up px-5 py-2.5">Intelligence Sources</div>
+        {sourceStatuses.map(src => {
+          let ts = ''
+          if (src.lastFetch) {
+            try { ts = formatDistanceToNow(new Date(src.lastFetch), { addSuffix: true }) } catch { /* */ }
+          }
+          return (
             <div
-              className="font-ui text-xs mb-2"
-              style={{ color: '#ff6b00', letterSpacing: '0.1em' }}
+              key={src.key}
+              className="flex items-center gap-2.5 px-5 py-1.5"
+              style={{ transition: 'background 0.1s' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-strong)')}
+              onMouseLeave={e => (e.currentTarget.style.background = '')}
             >
-              ⚠ CONVERGENCE EVENTS
+              <StatusDot status={src.status} />
+              <span className="flex-1 truncate" style={{ fontSize: '13px', color: 'var(--body)', fontFamily: 'var(--font-body)' }}>{src.name}</span>
+              <span style={{ fontSize: '11px', color: 'var(--muted-soft)', fontFamily: 'var(--font-mono)' }}>
+                {ts || (src.status === 'loading' ? 'fetching…' : '—')}
+              </span>
             </div>
-            <div className="space-y-2">
-              {assessment.convergenceEvents.map(e => (
-                <div
-                  key={e.location}
-                  className="p-2 rounded"
-                  style={{
-                    background: 'rgba(255,107,0,0.08)',
-                    border: '1px solid rgba(255,107,0,0.3)',
-                  }}
-                >
-                  <div className="font-terminal text-xs" style={{ color: '#ff6b00' }}>
-                    {e.location}
-                  </div>
-                  <div className="font-terminal mt-1" style={{ fontSize: '10px', color: '#8a9ab5' }}>
-                    {e.sourceCount} sources: {e.sources.join(', ')}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          )
+        })}
       </div>
 
-      {/* Footer timestamp */}
-      <div
-        className="px-3 py-2 font-terminal shrink-0"
-        style={{
-          fontSize: '10px',
-          color: '#4a5568',
-          borderTop: '1px solid var(--bg-panel-border)',
-          background: 'rgba(0,0,0,0.3)',
-        }}
-      >
-        UPDATED: {assessment ? new Date(assessment.lastUpdated).toLocaleTimeString() : '---'}
+      {/* Hotspot rankings */}
+      {assessment && assessment.hotspots.length > 0 && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="caption-up px-5 py-2.5">Top Regions</div>
+          {assessment.hotspots.slice(0, 6).map((hs, i) => {
+            const c = getThreatColor(hs.threatLevel)
+            return (
+              <button
+                key={hs.country}
+                className="w-full text-left px-5 py-2 flex items-center gap-2"
+                style={{ transition: 'background 0.1s', borderBottom: '1px solid var(--hairline-soft)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-strong)')}
+                onMouseLeave={e => (e.currentTarget.style.background = '')}
+                onClick={() => onHotspotSelect?.(hs)}
+              >
+                <span style={{ fontSize: '11px', color: 'var(--muted-soft)', minWidth: '14px', fontFamily: 'var(--font-mono)' }}>{i + 1}</span>
+                <span className="flex-1 truncate" style={{ fontSize: '13px', color: 'var(--body)', fontFamily: 'var(--font-body)' }}>{hs.country}</span>
+                <div style={{ width: '36px', height: '2px', background: 'var(--hairline)', borderRadius: '1px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${hs.intensity * 100}%`, background: c }} />
+                </div>
+                <span style={{ fontSize: '12px', color: c, minWidth: '24px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
+                  {Math.round(hs.score)}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="px-5 py-2 shrink-0" style={{ borderTop: '1px solid var(--hairline)', background: 'var(--canvas-soft)' }}>
+        <span style={{ fontSize: '11px', color: 'var(--muted-soft)', fontFamily: 'var(--font-body)' }}>
+          Updated {assessment ? new Date(assessment.lastUpdated).toLocaleTimeString() : '—'}
+        </span>
       </div>
     </div>
   )

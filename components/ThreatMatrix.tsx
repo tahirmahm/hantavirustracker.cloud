@@ -3,66 +3,66 @@
 import type { ThreatAssessment } from '@/lib/threatClassifier'
 import { getThreatColor } from '@/lib/threatClassifier'
 
+const LEVELS = ['MINIMAL', 'LOW', 'MODERATE', 'ELEVATED', 'HIGH', 'CRITICAL'] as const
+
 interface ThreatMatrixProps {
   assessment: ThreatAssessment | null
+  compact?: boolean
 }
 
-const THREAT_LEVELS = ['MINIMAL', 'LOW', 'MODERATE', 'ELEVATED', 'HIGH', 'CRITICAL'] as const
-
-export default function ThreatMatrix({ assessment }: ThreatMatrixProps) {
+export default function ThreatMatrix({ assessment, compact }: ThreatMatrixProps) {
   const current = assessment?.globalThreatLevel ?? 'MINIMAL'
-  const score = assessment?.threatScore ?? 0
-  const currentIdx = THREAT_LEVELS.indexOf(current)
+  const score   = assessment?.threatScore ?? 0
+  const idx     = LEVELS.indexOf(current)
+
+  if (compact) {
+    return (
+      <div className="flex gap-1 mt-3">
+        {LEVELS.map((level, i) => (
+          <div
+            key={level}
+            style={{
+              flex: 1, height: '4px', borderRadius: '2px',
+              background: i <= idx ? getThreatColor(level) : 'var(--hairline)',
+              opacity: i < idx ? 0.45 : 1,
+              transition: 'background 0.4s',
+            }}
+          />
+        ))}
+      </div>
+    )
+  }
 
   return (
-    <div className="p-3" style={{ borderBottom: '1px solid var(--bg-panel-border)' }}>
-      <div className="font-ui text-xs mb-2" style={{ color: '#4a5568', letterSpacing: '0.1em' }}>
-        THREAT MATRIX
-      </div>
-      <div className="space-y-1">
-        {THREAT_LEVELS.map((level, idx) => {
-          const color = getThreatColor(level)
-          const isActive = level === current
-          const isPast = idx < currentIdx
-
-          return (
+    <div className="space-y-2">
+      {LEVELS.map((level, i) => {
+        const color  = getThreatColor(level)
+        const active = level === current
+        const past   = i < idx
+        return (
+          <div key={level} className="flex items-center gap-2.5" style={{ opacity: past ? 0.4 : 1 }}>
             <div
-              key={level}
-              className="flex items-center gap-2"
-              style={{ opacity: isPast ? 0.4 : 1 }}
-            >
-              <div
-                className="w-2 h-2 rounded-sm shrink-0"
-                style={{
-                  background: isActive ? color : 'transparent',
-                  border: `1px solid ${color}`,
-                  boxShadow: isActive ? `0 0 6px ${color}` : 'none',
-                }}
-              />
-              <div className="flex-1">
-                <div
-                  className="h-1 rounded-full"
-                  style={{
-                    background: `linear-gradient(to right, ${color}${isActive ? 'cc' : '33'}, transparent)`,
-                    width: isActive ? `${Math.max(20, score)}%` : isPast ? '100%' : '0%',
-                    transition: 'width 0.5s ease',
-                  }}
-                />
-              </div>
-              <div
-                className="font-display text-xs shrink-0"
-                style={{
-                  color: isActive ? color : '#4a5568',
-                  fontSize: '9px',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                {level}
-              </div>
+              style={{
+                width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
+                background: active ? color : 'var(--hairline-strong)',
+              }}
+            />
+            <div style={{ flex: 1, height: '3px', background: 'var(--hairline)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', background: color, borderRadius: '2px', transition: 'width 0.5s ease',
+                width: active ? `${Math.max(10, score)}%` : past ? '100%' : '0%',
+              }} />
             </div>
-          )
-        })}
-      </div>
+            <span style={{
+              fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase',
+              color: active ? color : 'var(--muted-soft)', minWidth: '60px', textAlign: 'right',
+              fontFamily: 'var(--font-body)',
+            }}>
+              {level}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }

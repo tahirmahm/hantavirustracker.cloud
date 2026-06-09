@@ -2,89 +2,62 @@
 
 import { useEffect, useRef } from 'react'
 
-interface TerminalLogProps {
-  lines: string[]
-}
-
-export default function TerminalLog({ lines }: TerminalLogProps) {
-  const bottomRef = useRef<HTMLDivElement>(null)
+export default function TerminalLog({ lines, fillHeight }: { lines: string[]; fillHeight?: boolean }) {
+  const bottomRef   = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const autoScrollRef = useRef(true)
+  const autoScroll  = useRef(true)
 
   useEffect(() => {
-    if (autoScrollRef.current && bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
+    if (autoScroll.current) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [lines])
-
-  const handleScroll = () => {
-    if (!containerRef.current) return
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current
-    autoScrollRef.current = scrollHeight - scrollTop - clientHeight < 40
-  }
 
   return (
     <div
-      className="panel panel-corners shrink-0 flex flex-col"
+      className="flex flex-col"
       style={{
-        height: '160px',
-        borderTop: '1px solid var(--bg-panel-border)',
+        ...(fillHeight ? { flex: 1, minHeight: 0 } : { height: '140px', flexShrink: 0 }),
+        background: 'var(--surface-dark)',
+        borderTop: '1px solid #2a2521',
       }}
       aria-live="polite"
-      aria-label="Terminal event log"
     >
       {/* Header */}
       <div
-        className="px-3 py-1 font-display text-xs tracking-widest shrink-0 flex items-center gap-2"
-        style={{
-          color: '#00ff41',
-          borderBottom: '1px solid rgba(0,255,65,0.15)',
-          background: 'rgba(0,255,65,0.03)',
-        }}
+        className="flex items-center gap-2 px-4 py-1.5 shrink-0"
+        style={{ borderBottom: '1px solid #2a2521' }}
       >
-        <span
-          className="w-1.5 h-1.5 rounded-full dot-live"
-          style={{ background: '#00ff41', boxShadow: '0 0 4px #00ff41' }}
-        />
-        SYSTEM LOG
-        <span className="ml-auto font-terminal text-xs cursor">
+        <span className="pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+        <span style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--on-dark-soft)', fontFamily: 'var(--font-body)' }}>
+          System Log
         </span>
       </div>
 
-      {/* Log lines */}
+      {/* Lines */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto font-terminal text-xs p-2 space-y-0.5"
-        style={{ background: '#020304' }}
-        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 py-2"
+        style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', lineHeight: '1.6' }}
+        onScroll={() => {
+          if (!containerRef.current) return
+          const { scrollTop, scrollHeight, clientHeight } = containerRef.current
+          autoScroll.current = scrollHeight - scrollTop - clientHeight < 40
+        }}
       >
-        {lines.length === 0 ? (
-          <div style={{ color: '#4a5568' }}>Initializing...</div>
-        ) : (
-          lines.map((line, i) => {
-            const isError = line.includes('ERROR')
-            const isConvergence = line.includes('CONVERGENCE')
-            const isWarning = line.includes('WARNING') || line.includes('ELEVATED') || line.includes('HIGH')
-            const isInit = line.includes('SYSTEM INIT')
-
-            const color =
-              isError ? '#ff2040' :
-              isConvergence ? '#ff6b00' :
-              isWarning ? '#f0c040' :
-              isInit ? '#00d4ff' :
-              '#00ff41'
-
-            return (
-              <div
-                key={i}
-                className="leading-relaxed whitespace-pre-wrap break-all"
-                style={{ color, opacity: i === lines.length - 1 ? 1 : 0.75 }}
-              >
-                {line}
-              </div>
-            )
-          })
-        )}
+        {!lines.length
+          ? <span style={{ color: '#555' }}>Initializing…</span>
+          : lines.map((line, i) => {
+              const color =
+                line.includes('ERROR')       ? '#f87171' :
+                line.includes('CONVERGENCE') ? '#fb923c' :
+                line.includes('WARNING')     ? '#fbbf24' :
+                line.includes('SYSTEM INIT') ? '#60a5fa' :
+                '#86efac'
+              return (
+                <div key={i} style={{ color, opacity: i === lines.length - 1 ? 1 : 0.6 }}>
+                  {line}
+                </div>
+              )
+            })}
         <div ref={bottomRef} />
       </div>
     </div>
